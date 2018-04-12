@@ -6,6 +6,8 @@ import core
 import numpy
 import subprocess as sp
 import sys
+import pym
+import pym_pbuffer
 
 class Worker(QtCore.QObject):
 
@@ -17,6 +19,32 @@ class Worker(QtCore.QObject):
     QtCore.QObject.__init__(self)
     parent.videoTask.connect(self.createVideo)
     self.core = core.Core()
+
+    FPS = 30
+    # init projectM
+    settings = pym.Settings()
+    settings.windowWidth = 1280
+    settings.windowHeight = 720
+    settings.meshX = 1
+    settings.meshY = 1
+    settings.fps   = FPS
+    settings.textureSize = 2048
+    settings.smoothPresetDuration = 3
+    settings.presetDuration = 7
+    settings.beatSensitivity = 0.8
+    settings.aspectCorrection = 1
+    settings.easterEgg = 0
+    settings.shuffleEnabled = 1
+    settings.softCutRatingsEnabled = 1
+    base_path = ""
+    settings.presetURL = base_path + "/home/bryan/projects/projectm_install/share/projectM/presets/"
+    #settings.presetURL = base_path + "/home/bryan/projectm/src/projectM-sdl/presets/presets_milkdrop_200/";
+    settings.menuFontURL = base_path + "fonts/Vera.ttf"
+    settings.titleFontURL = base_path + "fonts/Vera.ttf"
+
+    self.renderer = pym_pbuffer.ImageRenderer(settings, 0)
+
+
 
 
   @pyqtSlot(str, str, QtGui.QFont, int, int, int, int, tuple, tuple, str, str)
@@ -34,6 +62,28 @@ class Worker(QtCore.QObject):
             yOffset,
             textColor,
             visColor)
+
+    
+    def combineImages(fg_image, bg_image):
+      im = Image.new("RGB", (1280, 720), "black")
+      im.paste(bg_image, (0, 0))
+
+      fg_image = fg_image.convert("RGBA")
+
+      datas = fg_image.getdata()
+
+      newData = []
+      for item in datas:
+        if item[0] == 0 and item[1] == 0 and item[2] == 0:
+          newData.append((0, 0, 0, 0))
+        else:
+          newData.append(item)
+      fg_image.putdata(newData)
+
+      im.paste(fg_image, (0, 0), mask=fg_image)
+      return im
+
+
 
     progressBarValue = 0
     self.progressBarUpdate.emit(progressBarValue)
@@ -83,29 +133,20 @@ class Worker(QtCore.QObject):
     out_pipe = sp.Popen(ffmpegCommand,
         stdin=sp.PIPE,stdout=sys.stdout, stderr=sys.stdout)
 
-    smoothConstantDown = 0.08
-    smoothConstantUp = 0.8
-    lastSpectrum = None
     sampleSize = 1470
     
     numpy.seterr(divide='ignore')
     bgI = 0
     for i in range(0, len(completeAudioArray), sampleSize):
       # create video for output
-      lastSpectrum = self.core.transformData(
-        i,
-        completeAudioArray,
-        sampleSize,
-        smoothConstantDown,
-        smoothConstantUp,
-        lastSpectrum)
+      self.renderer.renderFrame(completeAudioArray[i:i+sampleSize])  
+      imForeground = self.renderer.to_image()
       if imBackground != None:
-        im = self.core.drawBars(lastSpectrum, imBackground, visColor)
+        im = combineImages(imForeground, imBackground)
       else:
-        im = self.core.drawBars(lastSpectrum, getBackgroundAtIndex(bgI), visColor)
+        im = combineImages(imForeground, getBackgroundAtIndex(bgI))
         if bgI < len(backgroundFrames)-1:
             bgI += 1
-
       # write to out_pipe
       try:
         out_pipe.stdin.write(im.tobytes())

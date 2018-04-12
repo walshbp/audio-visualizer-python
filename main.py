@@ -1,4 +1,11 @@
 import sys, io, os
+import OpenGL
+#
+# Project M throws GL_INVALID_VALUE occasionally.
+# disable error checking for now...
+#
+OpenGL.ERROR_CHECKING = False 
+
 from PyQt4 import QtCore, QtGui, uic
 from PyQt4.QtGui import QPainter, QColor, QFont
 from os.path import expanduser
@@ -12,6 +19,7 @@ from PyQt4.QtCore import QSettings
 import signal
 
 import preview_thread, core, video_thread
+
 
 class Command(QtCore.QObject):
   
@@ -316,15 +324,19 @@ class Main(QtCore.QObject):
 
 if len(sys.argv) > 1:
   # command line mode
-  app = QtGui.QApplication(sys.argv, False)
+  QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_X11InitThreads)
+  app = QtGui.QApplication(sys.argv, True)
   command = Command()
   signal.signal(signal.SIGINT, command.cleanUp)
   sys.exit(app.exec_())
 else:
   # gui mode
   if __name__ == "__main__":
+    QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_X11InitThreads)
     app = QtGui.QApplication(sys.argv)
+    
     window = uic.loadUi("main.ui")
+
     # window.adjustSize()
     desc = QtGui.QDesktopWidget()
     dpi = desc.physicalDpiX()
@@ -334,7 +346,7 @@ else:
     window.verticalLayout_2.setContentsMargins(0, topMargin, 0, 0)
   
     main = Main(window)
-
+    
     signal.signal(signal.SIGINT, main.cleanUp)
     atexit.register(main.cleanUp)
 
