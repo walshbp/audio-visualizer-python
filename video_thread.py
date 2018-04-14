@@ -68,17 +68,18 @@ class Worker(QtCore.QObject):
       im = Image.new("RGB", (1280, 720), "black")
       im.paste(bg_image, (0, 0))
 
-      fg_image = fg_image.convert("RGBA")
+      #mask = mask.convert("L")
+      #fg_image = fg_image.convert("RGBA")
 
-      datas = fg_image.getdata()
+      # datas = fg_image.getdata()
 
-      newData = []
-      for item in datas:
-        if item[0] == 0 and item[1] == 0 and item[2] == 0:
-          newData.append((0, 0, 0, 0))
-        else:
-          newData.append(item)
-      fg_image.putdata(newData)
+      # newData = []
+      # for item in datas:
+      #   if item[0] == 0 and item[1] == 0 and item[2] == 0:
+      #     newData.append((0, 0, 0, 0))
+      #   else:
+      #     newData.append(item)
+      # fg_image.putdata(newData)
 
       im.paste(fg_image, (0, 0), mask=fg_image)
       return im
