@@ -42,7 +42,7 @@ class Worker(QtCore.QObject):
     settings.menuFontURL = base_path + "fonts/Vera.ttf"
     settings.titleFontURL = base_path + "fonts/Vera.ttf"
 
-    self.renderer = pym_pbuffer.ImageRenderer(settings, 0)
+    self.renderer = pym_pbuffer.ProjectMRenderer(settings, 0)
 
 
 
@@ -91,12 +91,13 @@ class Worker(QtCore.QObject):
     self.progressBarSetText.emit('Loading background image…')
 
     backgroundFrames = self.core.parseBaseImage(backgroundImage)
-    if len(backgroundFrames) < 2:
+    self.renderer.loadBackgroundImage(backgroundImage)
+    #if len(backgroundFrames) < 2:
         # the base image is not a video so we can draw it now
-        imBackground = getBackgroundAtIndex(0)
-    else:
+    #    imBackground = getBackgroundAtIndex(0)
+    #else:
         # base images will be drawn while drawing the audio bars
-        imBackground = None
+    #    imBackground = None
         
     self.progressBarSetText.emit('Loading audio file…')
     completeAudioArray = self.core.readAudioFile(inputFile)
@@ -141,13 +142,13 @@ class Worker(QtCore.QObject):
     for i in range(0, len(completeAudioArray), sampleSize):
       # create video for output
       self.renderer.renderFrame(completeAudioArray[i:i+sampleSize])  
-      imForeground = self.renderer.to_image()
-      if imBackground != None:
-        im = combineImages(imForeground, imBackground)
-      else:
-        im = combineImages(imForeground, getBackgroundAtIndex(bgI))
-        if bgI < len(backgroundFrames)-1:
-            bgI += 1
+      im = self.renderer.to_image()
+      #if imBackground != None:
+      #  im = combineImages(imForeground, imBackground)
+      #else:
+      #  im = combineImages(imForeground, getBackgroundAtIndex(bgI))
+      #  if bgI < len(backgroundFrames)-1:
+      #      bgI += 1
       # write to out_pipe
       try:
         out_pipe.stdin.write(im.tobytes())

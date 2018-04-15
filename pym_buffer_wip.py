@@ -14,25 +14,9 @@ except ImportError:
 
 # https://stackoverflow.com/questions/29252214/opengl-offscreen-in-separate-thread-with-qt-4-8?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa
 
-class ImageRenderer(object):
+class BackgroundImageRenderer(object):
+    def __init__(self, filename):
 
-    def __init__(self, settings, flags):
-        self.width = settings.windowWidth
-        self.height = settings.windowHeight
-        self.format = QtOpenGL.QGLFormat()
-        self.format.setAlpha(True)
-        self.format.setRgba(True)
-        self.pbuffer = QtOpenGL.QGLPixelBuffer(
-            settings.windowWidth, settings.windowHeight,self.format) 
-        self.pbuffer.makeCurrent() 
-        self.pym = pym.Pym(settings,flags)   
-        self.pym.resetGL(self.width, self.height)
-        GL.glEnable (GL.GL_BLEND)
-        GL.glBlendFuncSeparate(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA, GL.GL_ONE, GL.GL_ONE)
-        self.pbuffer.doneCurrent() 
-        self.i = 0
-
-    def loadBackgroundImage(self, filename):
         self.id = glGenTextures(1)
 
         GL.glEnable(GL.GL_TEXTURE_2D)
@@ -43,8 +27,8 @@ class ImageRenderer(object):
         GL.glPixelStorei(GL.GL_UNPACK_ALIGNMENT, 1)
         GL.glTexEnvf(GL.GL_TEXTURE_ENV, GL.GL_TEXTURE_ENV_MODE, GL.GL_DECAL)
 
-        QImage im(filename)
-        QImage tex = QGLWidget::convertToGLFormat(im)
+        im = QImage(filename)
+        self.tex = QGLWidget.convertToGLFormat(im)
 
         GL.glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.bits())
 
@@ -52,20 +36,20 @@ class ImageRenderer(object):
         GL.glTexParameteri(GL.GL_TEXTURE_2D,GL.GL_TEXTURE_MIN_FILTER,GL.GL_LINEAR)
 
         GL.glDisable(GL.GL_TEXTURE_2D)
-
-    def background(self):
-        GL.glBindTexture( GL_TEXTURE_2D, texture ) 
+    
+    def render(self, width, height
+        GL.glBindTexture( GL_TEXTURE_2D, self.id ) 
 
         # orthogonal start
         GL.glMatrixMode(GL.GL_PROJECTION)
         GL.glPushMatrix()
         GL.glLoadIdentity()
-        GL.gluOrtho2D(-w1/2, w1/2, -h1/2, h1/2)
+        GL.gluOrtho2D(-width/2, width/2, -height/2, height/2)
         GL.glMatrixMode(GL.GL_MODELVIEW)
 
         # texture width/height
-        iw = 1280
-        ih = 720
+        iw = self.tex.width()
+        ih = self.tex.height()
 
         GL.glPushMatrix()
         GL.glTranslatef( -iw/2, -ih/2, 0 )
@@ -85,6 +69,28 @@ class ImageRenderer(object):
         GL.glMatrixMode(GL.GL_PROJECTION)
         GL.glPopMatrix()
         GL.glMatrixMode(GL.GL_MODELVIEW)
+
+class ProjectMRenderer(object):
+
+    def __init__(self, settings, flags):
+        self.width = settings.windowWidth
+        self.height = settings.windowHeight
+        self.format = QtOpenGL.QGLFormat()
+        self.format.setAlpha(True)
+        self.format.setRgba(True)
+        self.pbuffer = QtOpenGL.QGLPixelBuffer(
+            settings.windowWidth, settings.windowHeight,self.format) 
+        self.pbuffer.makeCurrent() 
+        self.pym = pym.Pym(settings,flags)   
+        self.pym.resetGL(self.width, self.height)
+        GL.glEnable (GL.GL_BLEND)
+        GL.glBlendFuncSeparate(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA, GL.GL_ONE, GL.GL_ONE)
+        self.pbuffer.doneCurrent() 
+        self.i = 0
+
+    def loadBackgroundImage(self, filename):
+        self.background = BackgroundImageRenderer(filename)
+
 
     def renderFrame(self, audio_data):
         self.pbuffer.makeCurrent() 
